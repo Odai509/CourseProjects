@@ -1,0 +1,135 @@
+---
+title: 'How Does a Bike-Share Navigate Speedy Success?'
+subtitle: 'Google Data Analytics Capstone - Case Study'
+author: "Odai Aljonaid"
+date: "9/30/2022"
+output: html_document
+---
+-   [Introduction](#introduction)
+-   [The dataset](#the-dataset)
+-   [Data analysis process](#data-analysis-process)
+
+```{r}
+# Load required packages -------------------------------------------------------  
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, # for data import and wrangling 
+               lubridate, # for date functions
+               dplyr,     # for date manipulation
+               ggplot2)    # for data visualization  
+```
+
+
+# Introduction
+
+Welcome to the case study of Cyclistic bike-share! In this case study, we will execute a variety of data analyst tasks. We will work for a fictitious company called Cyclistic and will meet a variety of characters and team members. To answer the key business questions, we will use the data analysis process phases of ask, prepare, process, analyze, share, and act.
+
+The full document to the case study can be found in the [Google Data Analytics Capstone: Complete a Case Study course](https://www.coursera.org/learn/google-data-analytics-capstone).
+
+## Scenario
+
+>You are a junior data analyst working in the marketing analyst team at Cyclistic, a bike-share company in Chicago. The director of marketing believes the company’s future success depends on maximizing the number of annual memberships. Therefore, your team wants to understand how casual riders and annual members use Cyclistic bikes differently. From these insights, your team will design a new marketing strategy to convert casual riders into annual members. But first, Cyclistic executives must approve your recommendations, so they must be backed up with compelling data insights and professional data visualizations.
+
+# The dataset
+
+The data used in this case study originates from [divvy-tripdata](https://divvy-tripdata.s3.amazonaws.com/index.html) and we use the previous 12 months (*From September 2021 to August 2022*)  of Cyclistic trip data.
+
+Each month dataset contains 13 columns of interest:
+
+-   **ride_id** - stores an Unique ID for each ride.  
+-   **rideable_type** - The type of ride used.  
+-   **started_at** - The starting date and time of the ride.
+-   **ended_at** - The ending date and time of the ride.
+-   **start_station_name** - The starting location of the ride.
+-   **start_station_id** - The ID of the station where the ride started.
+-   **end_station_name** - The ending location of the ride.
+-   **end_station_id** - The ID of the station where the ride ended.
+-   **start_lat** - The latitude (position) of the starting point
+-   **start_lng** - The longitude(position) of the starting point.
+-   **end_lat** - The latitude (position) of the ending point
+-   **end_lng** - The longitude(position) of the ending point.
+-   **member_casual** - The type of rider (casual rider/annual member)
+
+In this analysis, we will merge all months datasets into a full-year view and perform data cleaning and manipulation process to address the business task.
+
+# Data analysis process
+
+In this case study, we will use the data analysis process phases of ask, prepare, process, analyze, share, and act to answer the key business questions,
+
+# Merging Data
+```{r}
+#Create the list of csv files in the data folder------------------------
+csv_files <- list.files(path = "./data", recursive = TRUE, full.names=TRUE)
+
+#Reading the list of csv files into a list of data frames---------------
+data_frames  <- lapply(csv_files, read.csv)
+
+#Combine them into a single data frame---------------------------------- 
+all_trips  <- do.call(rbind, data_frames)
+```
+
+# Cleaning Data
+
+## View the head of the dataset
+```{r}
+# Visualise the dataset as a table------------------------------------- 
+all_trips %>% 
+  head(6) %>% 
+  knitr::kable()
+```
+
+# Inspect the new table that has been created
+```{r}
+#List of column names-----------------------------------------------------
+colnames(all_trips)  
+#How many rows are in data frame?-----------------------------------------
+nrow(all_trips)  
+#Dimensions of the data frame?--------------------------------------------
+dim(all_trips)  
+#See list of columns and data types---------------------------------------
+str(all_trips)
+#See the distinct values of member_casual column--------------------------
+unique(all_trips$member_casual)
+```
+
+## Checking for duplicates
+```{r}
+n_distinct(all_trips$ride_id)
+print(paste("There", sum(duplicated(all_trips$ride_id)), "duplicated rows"))
+```
+## Checking for missing values
+```{r}
+sapply(all_trips, function(x) sum(is.na(x)))
+```
+
+## Parsing datetime columns
+```{r}
+# Convert character data to date and time----------------------------
+all_trips$started_at <- ymd_hms(all_trips$started_at)
+
+all_trips$ended_at <- ymd_hms(all_trips$ended_at)
+str(all_trips)
+```
+# Manipulating the data
+
+## Create a new column "ride_length" and calculate the duration for each trip 
+```{r}
+# noting that ride_length format as HH:MM:SS----------------------------
+all_trips <- all_trips %>%
+    mutate(ride_length = hms::as_hms(all_trips$ended_at - all_trips$started_at))
+head(all_trips$ride_length)
+```
+
+## Create a new column “day_of_week,” and calculate the day of the week that each ride started
+```{r}
+# noting that 1 = Sunday and 7 = Saturday----------------------------
+all_trips <- all_trips %>%
+    mutate(day_of_week = wday(all_trips$started_at, label = TRUE, abbr = TRUE))
+unique(all_trips$day_of_week)
+```
+
+#Saving the result as a CSV
+```{r}
+all_trips %>%
+  write.csv("all_trips_clean.csv")
+```
+
